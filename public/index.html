@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Запись к Зареме — косметолог, Махачкала</title>
+<meta name="description" content="Онлайн-запись к косметологу Зареме, Махачкала.">
+<meta name="theme-color" content="#FBF6F1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Зарема</h1>
+    <p>Косметолог · Махачкала</p>
+  </header>
+  <div class="bar" aria-hidden="true"><i id="progress"></i></div>
+
+  <section id="s1">
+    <h2>Процедура</h2>
+    <p class="sub">Выберите, на что хотите записаться</p>
+    <div id="services"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>
+  </section>
+
+  <section id="s2" class="hidden">
+    <button class="link" data-back="s1">← Назад</button>
+    <h2>Дата и время</h2>
+    <p class="sub" id="svcLine"></p>
+    <div class="days" id="days"></div>
+    <div id="timesBlock" class="hidden">
+      <div class="hint" id="dateHint"></div>
+      <div class="times" id="times"></div>
+    </div>
+    <div id="noSlots" class="empty hidden">На ближайшие дни свободного времени нет. Загляните позже.</div>
+    <button class="btn" id="to3" disabled>Продолжить</button>
+  </section>
+
+  <section id="s3" class="hidden">
+    <button class="link" data-back="s2">← Назад</button>
+    <h2>Ваши контакты</h2>
+    <p class="sub">Номер телефона не нужен</p>
+    <form id="form" novalidate>
+      <div class="field">
+        <label for="name">Имя</label>
+        <input type="text" id="name" autocomplete="given-name" maxlength="80" placeholder="Как к вам обращаться">
+      </div>
+      <div class="field">
+        <label>Как с вами связаться</label>
+        <div class="seg">
+          <button type="button" data-type="telegram" class="sel">Telegram</button>
+          <button type="button" data-type="instagram">Instagram</button>
+        </div>
+        <input type="text" id="contact" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="60" placeholder="@ваш_ник">
+      </div>
+      <div class="summary" id="sum3"></div>
+      <div class="err" id="err" role="alert"></div>
+      <button class="btn" id="submit" type="submit">Записаться</button>
+    </form>
+  </section>
+
+  <section id="s4" class="hidden">
+    <h2>Вы записаны</h2>
+    <p class="sub">Зарема получила вашу запись и свяжется с вами, если понадобится что-то уточнить.</p>
+    <div class="summary" id="sum4"></div>
+    <button class="btn" id="again">Записаться ещё</button>
+  </section>
+
+  <footer>Зарема · Махачкала</footer>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

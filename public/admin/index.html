@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Управление записью</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Montserrat:wght@800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<style>
+.tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:24px}
+.tabs button{min-height:48px;border-radius:14px;border:2px solid var(--line);background:#fff;font:inherit;font-weight:600;color:var(--choc);cursor:pointer}
+.tabs button.sel{background:var(--coffee);border-color:var(--coffee);color:var(--milk)}
+.box{background:#fff;border:2px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.box input[type=text],.box input[type=number],.box input[type=time],.box input[type=date]{width:100%;min-height:48px;border-radius:12px;border:2px solid var(--line);background:#fff;padding:0 12px;font:inherit;font-size:16px;color:var(--choc);margin-bottom:8px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600;margin:0}
+.chk input{width:24px;height:24px;accent-color:var(--coffee)}
+.small{min-height:44px;padding:0 16px;border-radius:12px;border:2px solid var(--line);background:#fff;font:inherit;font-weight:600;color:var(--choc);cursor:pointer}
+.danger{color:var(--err)}
+.ok{color:#2F6B3B;font-weight:600;min-height:1.4em}
+.bk b{display:block}.bk span{color:var(--muted)}
+.lab{font-size:14px;color:var(--muted);font-weight:600;margin:0 0 4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Админка</h1><p>Запись к Зареме</p></header>
+
+  <section id="login">
+    <form id="loginForm">
+      <div class="field"><label for="pw">Пароль</label><input type="password" id="pw" autocomplete="current-password"></div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn" type="submit">Войти</button>
+    </form>
+  </section>
+
+  <section id="app" class="hidden">
+    <div class="tabs">
+      <button data-tab="bookings" class="sel">Записи</button>
+      <button data-tab="services">Процедуры</button>
+      <button data-tab="hours">Часы работы</button>
+      <button data-tab="closed">Закрыть даты</button>
+    </div>
+    <div id="msg" class="ok"></div>
+    <div id="tab"></div>
+  </section>
+</div>
+<script src="/admin/admin.js"></script>
+</body>
+</html>
