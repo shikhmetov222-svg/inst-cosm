@@ -6,7 +6,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
   function call(body) {
-    return fetch('/api/admin', { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-password': pw }, body: JSON.stringify(body) })
+    return fetch(window.API_BASE + '/admin', { method: 'POST', headers: { 'content-type': 'application/json', 'x-admin-password': pw }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); });
   }
   function flash(t) { $('msg').textContent = t; setTimeout(function () { if ($('msg').textContent === t) $('msg').textContent = ''; }, 3000); }

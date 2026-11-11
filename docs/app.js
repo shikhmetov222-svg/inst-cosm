@@ -18,7 +18,7 @@
   }
 
   // Шаг 1: процедуры
-  api('/api/services').then(function (r) {
+  api(window.API_BASE + '/services').then(function (r) {
     var list = r.body.services || [];
     if (!list.length) { $('services').innerHTML = '<div class="empty">Процедуры скоро появятся.</div>'; return; }
     $('services').innerHTML = list.map(function (s) {
@@ -38,7 +38,7 @@
     $('days').innerHTML = ''; $('times').innerHTML = '';
     $('timesBlock').classList.add('hidden'); $('noSlots').classList.add('hidden'); $('to3').disabled = true;
     show('s2');
-    return api('/api/availability?service=' + state.service.id).then(function (r) {
+    return api(window.API_BASE + '/availability?service=' + state.service.id).then(function (r) {
       state.days = r.body.days || {};
       var keys = Object.keys(state.days).sort();
       var any = keys.some(function (k) { return state.days[k].length; });
@@ -86,7 +86,7 @@
     if (!name) { $('err').textContent = 'Укажите имя'; return; }
     if (!contact) { $('err').textContent = 'Укажите ник в Telegram или Instagram'; return; }
     $('submit').disabled = true; $('err').textContent = '';
-    api('/api/book', {
+    api(window.API_BASE + '/book', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ serviceId: state.service.id, date: state.date, time: state.time, name: name, contact: contact, contactType: state.ctype })
     }).then(function (r) {
