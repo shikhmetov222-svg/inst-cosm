@@ -87,19 +87,26 @@
     b.addEventListener('click', function () {
       state.ctype = b.dataset.type;
       document.querySelectorAll('.seg button').forEach(function (x) { x.classList.toggle('sel', x === b); });
+      var isPhone = state.ctype === 'phone';
+      $('contact').value = '';
+      $('contact').type = isPhone ? 'tel' : 'text';
+      $('contact').inputMode = isPhone ? 'tel' : 'text';
+      $('contact').placeholder = isPhone ? '+7 900 000-00-00' : '@ваш_ник';
     });
   });
   function rows(a) { return a.map(function (r) { return '<div><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>'; }).join(''); }
 
   $('form').addEventListener('submit', function (e) {
     e.preventDefault();
-    var name = $('name').value.trim(), contact = $('contact').value.trim(), phone = $('phone').value.trim();
+    var name = $('name').value.trim(), contact = $('contact').value.trim();
+    var isPhone = state.ctype === 'phone';
     if (!name) { $('err').textContent = 'Укажите имя'; return; }
-    if (phone.replace(/\D/g, '').length < 10) { $('err').textContent = 'Укажите телефон, по нему Зарема свяжется с вами'; return; }
+    if (!contact) { $('err').textContent = isPhone ? 'Укажите телефон' : 'Укажите ник в ' + (state.ctype === 'telegram' ? 'Telegram' : 'Instagram'); return; }
+    if (isPhone && contact.replace(/\D/g, '').length < 10) { $('err').textContent = 'Укажите телефон полностью, с кодом города или оператора'; return; }
     $('submit').disabled = true; $('err').textContent = '';
     api(window.API_BASE + '/book', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ serviceId: state.service.id, date: state.date, time: state.time, name: name, phone: phone, contact: contact, contactType: state.ctype })
+      body: JSON.stringify({ serviceId: state.service.id, date: state.date, time: state.time, name: name, contact: contact, contactType: state.ctype })
     }).then(function (r) {
       $('submit').disabled = false;
       if (r.status === 200 && r.body.ok) {

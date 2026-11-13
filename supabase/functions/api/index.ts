@@ -140,15 +140,17 @@ async function handleBook(req: Request) {
   let b: Any;
   try { b = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
   const name = String(b.name || "").trim().slice(0, 80);
-  const phone = normalizePhone(b.phone);
-  const rawNick = String(b.contact || "").trim();
-  const contact = rawNick ? normalizeContact(b.contactType, rawNick) : null;
+  // Один способ связи на выбор: Telegram, Instagram или телефон
+  const isPhone = b.contactType === "phone";
+  const raw = String(b.contact || "").trim();
+  const phone = isPhone ? normalizePhone(raw) : null;
+  const contact = isPhone ? null : normalizeContact(b.contactType, raw);
   const date = String(b.date || "");
   const time = String(b.time || "");
   const serviceId = parseInt(b.serviceId, 10);
   if (!name) return json({ error: "name", message: "Укажите имя" }, 400);
-  if (!phone) return json({ error: "phone", message: "Укажите телефон, например +7 900 000-00-00" }, 400);
-  if (rawNick && !contact) return json({ error: "contact", message: "Проверьте ник: латиница, цифры, _ и точка" }, 400);
+  if (isPhone && !phone) return json({ error: "phone", message: "Укажите телефон, например +7 900 000-00-00" }, 400);
+  if (!isPhone && !contact) return json({ error: "contact", message: "Проверьте ник: латиница, цифры, _ и точка" }, 400);
   if (!dateOk(date) || !/^\d{2}:\d{2}$/.test(time) || !serviceId) return json({ error: "bad_request" }, 400);
 
   const s = await sb(`services?select=*&id=eq.${serviceId}&active=eq.true`);
@@ -179,8 +181,9 @@ async function handleBook(req: Request) {
     `Процедура: ${escapeHtml(svc.name)} (${svc.duration_min} мин, ${escapeHtml(svc.price_text)})\n` +
     `Когда: ${humanDate(date)}, ${time}\n` +
     `Клиент: ${escapeHtml(name)}\n` +
-    `Телефон: <a href="tel:${phone}">${escapeHtml(phone)}</a>\n` +
-    (contact ? `Контакт: <a href="${link}">${escapeHtml(contact.text)}</a>` : ""),
+    (phone
+      ? `Телефон: <a href="tel:${phone}">${escapeHtml(phone)}</a>`
+      : `Контакт: <a href="${link}">${escapeHtml(contact!.text)}</a>`),
   );
   return json({ ok: true, booking: { service: svc.name, date, time, durationMin: svc.duration_min, price: svc.price_text, dateHuman: humanDate(date) } });
 }
