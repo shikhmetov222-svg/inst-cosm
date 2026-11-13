@@ -52,3 +52,8 @@ input[type=password]:focus,input[type=text]:focus{outline:none;border-color:var(
 .hidden{display:none}
 .skeleton{height:64px;border-radius:var(--r);background:linear-gradient(90deg,var(--powder-soft),#fff,var(--powder-soft));margin-bottom:12px}
 footer{text-align:center;color:var(--muted);font-size:14px;margin-top:40px}
+details.cat{margin-bottom:24px}
+details.cat summary{list-style:none;display:flex;align-items:center;justify-content:space-between;min-height:48px;cursor:pointer;font-size:18px;color:var(--coffee-dark);padding:8px 2px;margin-bottom:8px;border-bottom:2px solid var(--powder)}
+details.cat summary::-webkit-details-marker{display:none}
+details.cat summary i{width:12px;height:12px;border-right:2px solid var(--coffee);border-bottom:2px solid var(--coffee);transform:rotate(45deg);transition:transform .2s;margin-right:6px}
+details.cat[open] summary i{transform:rotate(-135deg)}

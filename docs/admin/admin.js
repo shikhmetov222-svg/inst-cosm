@@ -43,15 +43,69 @@
       });
     }
     if (tab === 'services') {
-      el.innerHTML = '<div id="sl">' + data.services.map(svcRow).join('') + '</div><button class="small" id="addSvc" style="width:100%;margin-bottom:12px">+ Добавить процедуру</button><button class="btn" id="saveSvc">Сохранить процедуры</button>';
-      $('addSvc').onclick = function () { $('sl').insertAdjacentHTML('beforeend', svcRow({ id: '', name: '', price_text: '', duration_min: 60, active: true })); };
-      $('saveSvc').onclick = function () {
-        var list = Array.prototype.map.call(document.querySelectorAll('.svc'), function (r) {
-          return { id: r.dataset.id || null, name: r.querySelector('.n').value, price_text: r.querySelector('.p').value, duration_min: r.querySelector('.d').value, active: r.querySelector('.a').checked };
-        });
-        call({ action: 'saveServices', services: list }).then(function () { flash('Сохранено'); load(); });
+      var cats = data.categories || [];
+      var catList = cats.map(function (c) { return { key: 'c' + c.id, name: c.name }; });
+      var inCat = function (s) { return cats.some(function (c) { return c.id === s.category_id; }); };
+      var blocks = cats.map(function (c) {
+        return { key: 'c' + c.id, id: c.id, name: c.name, items: data.services.filter(function (s) { return s.category_id === c.id; }) };
+      });
+      var loose = data.services.filter(function (s) { return !inCat(s); });
+      if (loose.length) blocks.push({ key: 'none', id: null, name: 'Без категории', items: loose, loose: true });
+      el.innerHTML =
+        '<button class="small" id="addCat" type="button" style="width:100%;margin-bottom:16px">+ Добавить категорию</button>' +
+        '<div id="cats">' + blocks.map(function (b) { return catBlock(b, catList); }).join('') + '</div>' +
+        '<button class="btn" id="saveSvc" type="button">Сохранить</button>';
+
+      $('addCat').onclick = function () {
+        var key = 'n' + Date.now();
+        var html = catBlock({ key: key, id: null, name: '', items: [] }, domCats().concat([{ key: key, name: '' }]));
+        var lb = el.querySelector('[data-cat="none"]');
+        if (lb) lb.insertAdjacentHTML('beforebegin', html); else $('cats').insertAdjacentHTML('beforeend', html);
+        refreshSelects();
       };
-      el.onclick = function (e) { var b = e.target.closest(".rm"); if (b && confirm('Удалить процедуру? Нажмите «Сохранить», чтобы применить.')) b.closest('.svc').remove(); };
+      el.onclick = function (e) {
+        var t = e.target;
+        if (t.closest('.rm')) { if (confirm('Удалить процедуру? Применится после «Сохранить».')) t.closest('.svc').remove(); return; }
+        if (t.closest('.delcat')) {
+          var box = t.closest('.catbox'); var key = box.dataset.cat;
+          var used = Array.prototype.filter.call(document.querySelectorAll('.cs'), function (s) { return s.value === key; }).length;
+          if (used) { alert('В этой категории есть процедуры. Сначала перенесите их: в каждой процедуре выберите другую категорию.'); return; }
+          if (confirm('Удалить категорию «' + box.querySelector('.cn').value + '»?')) { box.remove(); refreshSelects(); }
+          return;
+        }
+        if (t.closest('.addsvc')) {
+          var bx = t.closest('.catbox');
+          bx.querySelector('.addsvc').insertAdjacentHTML('beforebegin', svcRow({ id: '', name: '', price_text: '', duration_min: 60, duration_known: false, active: true }, bx.dataset.cat, domCats()));
+        }
+      };
+      el.oninput = function (e) { if (e.target.classList.contains('cn')) refreshSelects(); };
+
+      $('saveSvc').onclick = function () {
+        var catsIn = domCats();
+        if (catsIn.some(function (c) { return !c.name.trim(); })) { alert('У какой-то категории не написано название. Заполните его или удалите категорию.'); return; }
+        var payload = catsIn.map(function (c) {
+          var box = document.querySelector('.catbox[data-cat="' + c.key + '"]');
+          return { id: box.dataset.id ? +box.dataset.id : null, name: c.name.trim() };
+        });
+        call({ action: 'saveCategories', categories: payload }).then(function (r) {
+          if (r.status !== 200) { alert(r.body.message || 'Не получилось сохранить категории'); return null; }
+          var idByKey = {};
+          catsIn.forEach(function (c, i) { idByKey[c.key] = r.body.categories[i].id; });
+          var list = Array.prototype.map.call(document.querySelectorAll('.svc'), function (row) {
+            var d = row.querySelector('.d'); var key = row.querySelector('.cs').value;
+            return {
+              id: row.dataset.id ? +row.dataset.id : null,
+              name: row.querySelector('.n').value,
+              price_text: row.querySelector('.p').value,
+              duration_min: d.value || 60,
+              duration_known: d.value !== d.dataset.orig || row.dataset.known === '1',
+              active: row.querySelector('.a').checked,
+              category_id: key === 'none' ? null : (idByKey[key] || null)
+            };
+          });
+          return call({ action: 'saveServices', services: list });
+        }).then(function (r) { if (r) { flash('Сохранено'); load(); } });
+      };
     }
     if (tab === 'hours') {
       var s = data.settings;
@@ -72,7 +126,40 @@
       el.querySelectorAll('[data-open]').forEach(function (b) { b.onclick = function () { call({ action: 'openDate', day: b.dataset.open }).then(function () { flash('Дата открыта'); load(); }); }; });
     }
   }
-  function svcRow(s) {
-    return '<div class="box svc" data-id="' + esc(s.id) + '"><p class="lab">Название</p><input type="text" class="n" value="' + esc(s.name) + '"><div class="row2"><div><p class="lab">Цена (текст)</p><input type="text" class="p" value="' + esc(s.price_text) + '"></div><div><p class="lab">Минут</p><input type="number" class="d" inputmode="numeric" value="' + esc(s.duration_min) + '"></div></div><label class="chk"><input type="checkbox" class="a"' + (s.active ? ' checked' : '') + '> Показывать клиентам</label><button class="small danger rm" style="margin-top:8px">Удалить</button></div>';
+  // Категория блока: key 'c<id>' для сохранённых, 'n<время>' для новых, 'none' для «Без категории»
+  function catBlock(b, catList) {
+    var head = b.loose
+      ? '<p class="caps" style="font-size:16px;color:var(--muted);margin:0 0 10px">Без категории</p>'
+      : '<p class="lab">Категория</p><div class="row2"><input type="text" class="cn" value="' + esc(b.name) + '" maxlength="60"><button class="small danger delcat" type="button">Удалить</button></div>';
+    return '<div class="box catbox" data-cat="' + b.key + '" data-id="' + (b.id || '') + '">' + head +
+      b.items.map(function (s) { return svcRow(s, b.key, catList); }).join('') +
+      '<button class="small addsvc" type="button" style="width:100%;margin-top:4px">+ Процедура</button></div>';
+  }
+  function svcRow(s, key, catList) {
+    var known = s.duration_known !== false;
+    var dur = known ? String(s.duration_min) : '';
+    return '<div class="box svc" data-id="' + esc(s.id || '') + '" data-known="' + (known ? '1' : '0') + '">' +
+      '<p class="lab">Название</p><input type="text" class="n" value="' + esc(s.name || '') + '">' +
+      '<div class="row2"><div><p class="lab">Цена (текст)</p><input type="text" class="p" value="' + esc(s.price_text || '') + '"></div>' +
+      '<div><p class="lab">Минут</p><input type="number" class="d" inputmode="numeric" placeholder="не указано" value="' + esc(dur) + '" data-orig="' + esc(dur) + '"></div></div>' +
+      (known ? '' : '<p class="lab" style="color:var(--err)">Время не указано: введите минуты</p>') +
+      '<p class="lab">Категория</p><select class="cs">' + optionsFor(key, catList) + '</select>' +
+      '<label class="chk"><input type="checkbox" class="a"' + (s.active !== false ? ' checked' : '') + '> Показывать клиентам</label>' +
+      '<button class="small danger rm" type="button" style="margin-top:8px">Удалить</button></div>';
+  }
+  function optionsFor(selected, catList) {
+    return catList.map(function (c) {
+      return '<option value="' + c.key + '"' + (c.key === selected ? ' selected' : '') + '>' + esc(c.name || 'Без названия') + '</option>';
+    }).join('') + '<option value="none"' + (selected === 'none' ? ' selected' : '') + '>Без категории</option>';
+  }
+  // Текущий список категорий, как он сейчас на экране (с учётом новых и переименованных)
+  function domCats() {
+    return Array.prototype.map.call(document.querySelectorAll('.catbox[data-cat]:not([data-cat="none"])'), function (b) {
+      return { key: b.dataset.cat, name: b.querySelector('.cn').value };
+    });
+  }
+  function refreshSelects() {
+    var cs = domCats();
+    Array.prototype.forEach.call(document.querySelectorAll('.cs'), function (s) { s.innerHTML = optionsFor(s.value, cs); });
   }
 })();

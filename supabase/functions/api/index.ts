@@ -183,18 +183,41 @@ async function handleAdmin(req: Request) {
 
   switch (b.action) {
     case "load": {
-      const [services, hours, closed, settings, bookings] = await Promise.all([
+      const [services, categories, hours, closed, settings, bookings] = await Promise.all([
         sb("services?select=*&order=sort.asc,id.asc"),
+        sb("categories?select=*&order=sort.asc,id.asc"),
         sb("work_hours?select=*&order=weekday.asc"),
         sb("closed_dates?select=*&order=day.asc"),
         sb("settings?select=*"),
         sb(`bookings?select=*&status=eq.active&end_at=gt.${encodeURIComponent(new Date().toISOString())}&order=start_at.asc`),
       ]);
       return json({
-        services: services.data, hours: hours.data, closed: closed.data,
+        services: services.data, categories: categories.data, hours: hours.data, closed: closed.data,
         settings: Object.fromEntries((settings.data || []).map((x: Any) => [x.key, x.value])),
         bookings: bookings.data,
       });
+    }
+    case "saveCategories": {
+      // Порядок в массиве = порядок на экране. Ответ: id категорий в том же порядке.
+      const list: Any[] = Array.isArray(b.categories) ? b.categories : [];
+      const keep: number[] = [];
+      const result: { id: number; name: string }[] = [];
+      for (const [i, c] of list.entries()) {
+        const name = String(c.name || "").trim().slice(0, 60);
+        if (!name) continue;
+        const row = { name, sort: i };
+        let id = num(c.id, 0);
+        if (id) { const r = await sb(`categories?id=eq.${id}`, { method: "PATCH", prefer: "return=representation", body: row }); if (!r.ok) return json({ error: "name_taken", message: "Такая категория уже есть" }, 409); }
+        else {
+          const r = await sb("categories", { method: "POST", prefer: "return=representation", body: row });
+          if (!r.ok) return json({ error: "name_taken", message: "Такая категория уже есть" }, 409);
+          id = r.data?.[0]?.id;
+        }
+        if (id) { keep.push(id); result.push({ id, name }); }
+      }
+      // Категории, которых больше нет в списке, удаляем. Их процедуры остаются без категории.
+      if (keep.length) await sb(`categories?id=not.in.(${keep.join(",")})`, { method: "DELETE" });
+      return json({ ok: true, categories: result });
     }
     case "saveServices": {
       const list: Any[] = Array.isArray(b.services) ? b.services : [];
@@ -204,11 +227,14 @@ async function handleAdmin(req: Request) {
           name: String(s.name || "").trim().slice(0, 120) || "Без названия",
           price_text: String(s.price_text || "").trim().slice(0, 60),
           duration_min: Math.min(600, Math.max(5, num(s.duration_min, 60))),
+          duration_known: s.duration_known !== false,
+          category_id: num(s.category_id, 0) || null,
           sort: i, active: s.active !== false,
         };
         if (s.id) { await sb(`services?id=eq.${num(s.id)}`, { method: "PATCH", body: row }); keep.push(num(s.id)); }
         else { const r = await sb("services", { method: "POST", prefer: "return=representation", body: row }); if (r.data?.[0]) keep.push(r.data[0].id); }
       }
+      // Пустой список ничего не удаляет (защита от случайного обнуления)
       if (keep.length) await sb(`services?id=not.in.(${keep.join(",")})`, { method: "DELETE" });
       return json({ ok: true });
     }
@@ -255,8 +281,11 @@ Deno.serve(async (req: Request) => {
   const route = url.pathname.replace(/\/+$/, "").split("/").pop();
   try {
     if (route === "services" && req.method === "GET") {
-      const r = await sb("services?select=id,name,price_text,duration_min&active=eq.true&order=sort.asc,id.asc");
-      return r.ok ? json({ services: r.data }) : json({ error: "db" }, 500);
+      const [s, c] = await Promise.all([
+        sb("services?select=id,name,price_text,duration_min,duration_known,category_id&active=eq.true&order=sort.asc,id.asc"),
+        sb("categories?select=id,name,sort&order=sort.asc,id.asc"),
+      ]);
+      return s.ok && c.ok ? json({ categories: c.data, services: s.data }) : json({ error: "db" }, 500);
     }
     if (route === "availability" && req.method === "GET") {
       const id = parseInt(url.searchParams.get("service") || "", 10);

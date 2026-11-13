@@ -20,9 +20,20 @@
   // Шаг 1: процедуры
   api(window.API_BASE + '/services').then(function (r) {
     var list = r.body.services || [];
+    var cats = r.body.categories || [];
     if (!list.length) { $('services').innerHTML = '<div class="empty">Процедуры скоро появятся.</div>'; return; }
-    $('services').innerHTML = list.map(function (s) {
-      return '<button class="card" data-id="' + s.id + '"><b>' + esc(s.name) + '</b><span>' + esc(s.price_text) + ' · ' + s.duration_min + ' мин</span></button>';
+    function card(s) {
+      var meta = esc(s.price_text) + (s.duration_known ? ' · ' + s.duration_min + ' мин' : '');
+      return '<button class="card" data-id="' + s.id + '"><b>' + esc(s.name) + '</b><span>' + meta + '</span></button>';
+    }
+    // Группы по категориям в порядке из базы; процедуры без категории — в конце
+    var groups = cats.map(function (c) {
+      return { name: c.name, items: list.filter(function (s) { return s.category_id === c.id; }) };
+    }).filter(function (g) { return g.items.length; });
+    var loose = list.filter(function (s) { return !s.category_id || !cats.some(function (c) { return c.id === s.category_id; }); });
+    if (loose.length) groups.push({ name: 'Другое', items: loose });
+    $('services').innerHTML = groups.map(function (g) {
+      return '<details class="cat" open><summary class="caps">' + esc(g.name) + '<i></i></summary>' + g.items.map(card).join('') + '</details>';
     }).join('');
     $('services').addEventListener('click', function (e) {
       var b = e.target.closest('.card'); if (!b) return;
@@ -34,7 +45,7 @@
 
   // Шаг 2: даты и время
   function loadDays() {
-    $('svcLine').textContent = state.service.name + ' · ' + state.service.duration_min + ' мин';
+    $('svcLine').textContent = state.service.name + (state.service.duration_known ? ' · ' + state.service.duration_min + ' мин' : '');
     $('days').innerHTML = ''; $('times').innerHTML = '';
     $('timesBlock').classList.add('hidden'); $('noSlots').classList.add('hidden'); $('to3').disabled = true;
     show('s2');
