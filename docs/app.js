@@ -93,13 +93,13 @@
 
   $('form').addEventListener('submit', function (e) {
     e.preventDefault();
-    var name = $('name').value.trim(), contact = $('contact').value.trim();
+    var name = $('name').value.trim(), contact = $('contact').value.trim(), phone = $('phone').value.trim();
     if (!name) { $('err').textContent = 'Укажите имя'; return; }
-    if (!contact) { $('err').textContent = 'Укажите ник в Telegram или Instagram'; return; }
+    if (phone.replace(/\D/g, '').length < 10) { $('err').textContent = 'Укажите телефон, по нему Зарема свяжется с вами'; return; }
     $('submit').disabled = true; $('err').textContent = '';
     api(window.API_BASE + '/book', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ serviceId: state.service.id, date: state.date, time: state.time, name: name, contact: contact, contactType: state.ctype })
+      body: JSON.stringify({ serviceId: state.service.id, date: state.date, time: state.time, name: name, phone: phone, contact: contact, contactType: state.ctype })
     }).then(function (r) {
       $('submit').disabled = false;
       if (r.status === 200 && r.body.ok) {

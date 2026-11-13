@@ -48,7 +48,12 @@
         <input type="text" id="name" autocomplete="given-name" maxlength="80" placeholder="Как к вам обращаться">
       </div>
       <div class="field">
-        <label>Как с вами связаться</label>
+        <label for="phone">Телефон</label>
+        <input type="tel" id="phone" inputmode="tel" autocomplete="tel" maxlength="20" placeholder="+7 900 000-00-00">
+        <p class="sub" style="margin:8px 0 0">Нужен, чтобы Зарема могла позвонить и напомнить о записи.</p>
+      </div>
+      <div class="field">
+        <label>Telegram или Instagram <span style="font-weight:400;color:var(--muted)">(необязательно)</span></label>
         <div class="seg">
           <button type="button" data-type="telegram" class="sel">Telegram</button>
           <button type="button" data-type="instagram">Instagram</button>

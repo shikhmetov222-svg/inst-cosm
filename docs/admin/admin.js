@@ -36,7 +36,9 @@
     var el = $('tab');
     if (tab === 'bookings') {
       el.innerHTML = (data.bookings.length ? data.bookings.map(function (b) {
-        return '<div class="box bk"><b>' + fmt(b.start_at) + ' · ' + esc(b.service_name) + '</b><span>' + esc(b.client_name) + ' · ' + esc(b.contact) + '</span><br><button class="small danger" data-cancel="' + b.id + '" style="margin-top:10px">Отменить запись</button></div>';
+        var tel = b.phone ? '<a class="small" href="tel:' + esc(b.phone) + '" style="display:inline-flex;align-items:center;margin-top:10px;margin-right:8px;text-decoration:none;color:var(--choc)">Позвонить ' + esc(b.phone) + '</a>' : '';
+        var who = [b.client_name, b.contact].filter(Boolean).map(esc).join(' · ');
+        return '<div class="box bk"><b>' + fmt(b.start_at) + ' · ' + esc(b.service_name) + '</b><span>' + who + '</span><br>' + tel + '<button class="small danger" data-cancel="' + b.id + '" style="margin-top:10px">Отменить запись</button></div>';
       }).join('') : '<div class="empty">Предстоящих записей нет.</div>');
       el.querySelectorAll('[data-cancel]').forEach(function (b) {
         b.onclick = function () { if (confirm('Отменить эту запись? Время снова станет свободным.')) call({ action: 'cancelBooking', id: b.dataset.cancel }).then(function () { flash('Запись отменена'); load(); }); };

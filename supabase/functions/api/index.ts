@@ -127,16 +127,28 @@ const num = (v: unknown, d?: number) => (Number.isFinite(parseInt(String(v), 10)
 const timeOk = (t: string) => /^\d{2}:\d{2}$/.test(t);
 const dateOk = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d || "");
 
+// Телефон: 8XXXXXXXXXX и 7XXXXXXXXXX приводим к +7XXXXXXXXXX, остальное принимаем как международный номер
+function normalizePhone(raw: unknown): string | null {
+  let d = String(raw || "").replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("8")) d = "7" + d.slice(1);
+  if (d.length === 10) d = "7" + d;
+  if (d.length < 10 || d.length > 15) return null;
+  return "+" + d;
+}
+
 async function handleBook(req: Request) {
   let b: Any;
   try { b = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
   const name = String(b.name || "").trim().slice(0, 80);
-  const contact = normalizeContact(b.contactType, b.contact);
+  const phone = normalizePhone(b.phone);
+  const rawNick = String(b.contact || "").trim();
+  const contact = rawNick ? normalizeContact(b.contactType, rawNick) : null;
   const date = String(b.date || "");
   const time = String(b.time || "");
   const serviceId = parseInt(b.serviceId, 10);
   if (!name) return json({ error: "name", message: "Укажите имя" }, 400);
-  if (!contact) return json({ error: "contact", message: "Проверьте ник: латиница, цифры, _ и точка" }, 400);
+  if (!phone) return json({ error: "phone", message: "Укажите телефон, например +7 900 000-00-00" }, 400);
+  if (rawNick && !contact) return json({ error: "contact", message: "Проверьте ник: латиница, цифры, _ и точка" }, 400);
   if (!dateOk(date) || !/^\d{2}:\d{2}$/.test(time) || !serviceId) return json({ error: "bad_request" }, 400);
 
   const s = await sb(`services?select=*&id=eq.${serviceId}&active=eq.true`);
@@ -152,7 +164,8 @@ async function handleBook(req: Request) {
     method: "POST",
     prefer: "return=representation",
     body: {
-      service_id: svc.id, service_name: svc.name, client_name: name, contact: contact.text,
+      service_id: svc.id, service_name: svc.name, client_name: name, phone,
+      contact: contact ? contact.text : null,
       start_at: start.toISOString(), end_at: end.toISOString(),
     },
   });
@@ -160,13 +173,14 @@ async function handleBook(req: Request) {
   if (ins.status === 409 || ins.data?.code === "23P01") return json({ error: "taken", message: "Это время уже занято" }, 409);
   if (!ins.ok) return json({ error: "db" }, 500);
 
-  const link = contact.type === "telegram" ? `https://t.me/${contact.nick}` : `https://instagram.com/${contact.nick}`;
+  const link = contact ? (contact.type === "telegram" ? `https://t.me/${contact.nick}` : `https://instagram.com/${contact.nick}`) : "";
   await notifyTelegram(
     `<b>Новая запись</b>\n\n` +
     `Процедура: ${escapeHtml(svc.name)} (${svc.duration_min} мин, ${escapeHtml(svc.price_text)})\n` +
     `Когда: ${humanDate(date)}, ${time}\n` +
     `Клиент: ${escapeHtml(name)}\n` +
-    `Контакт: <a href="${link}">${escapeHtml(contact.text)}</a>`,
+    `Телефон: <a href="tel:${phone}">${escapeHtml(phone)}</a>\n` +
+    (contact ? `Контакт: <a href="${link}">${escapeHtml(contact.text)}</a>` : ""),
   );
   return json({ ok: true, booking: { service: svc.name, date, time, durationMin: svc.duration_min, price: svc.price_text, dateHuman: humanDate(date) } });
 }
